@@ -112,6 +112,11 @@ df_wider %>%
   group_by(source, word_number, tokenization_type) %>%
   summarise(m_accuracy = mean(accuracy))
 
+df_wider %>%
+  filter(word_number == "plur") %>%
+  group_by(source, tokenization_type) %>%
+  summarise(m_accuracy = mean(accuracy))
+
 ```
 
 
@@ -273,7 +278,8 @@ table(df_wider$tokenization_type, df_wider$word_number)
 
 ## Just plurals
 df_plurals = df_wider %>%
-  filter(word_number != "sing")
+  filter(word_number != "sing") %>%
+  filter(source != "morphemic")
 
 ## Descriptive statistics
 df_plurals %>%
@@ -427,18 +433,27 @@ Does token frequency predict successful agreement for that token? Yes: log-odds 
 
 ```{r supp_freq_log_odds}
 ### is there an interaction between the frequency of the wordform and the word number
-mod_freq_lo = lmer(data = df_wider_freq,
-                     log_odds ~ log_freq_wordform * word_number + source +
+df_wider_freq_og = df_wider_freq %>%
+  filter(tokenization_type == "default")
+
+mod_freq_lo = lmer(data = df_wider_freq_og,
+                     log_odds ~ log_freq_wordform * word_number + source * word_number +
                        (1 | lemma) + (1 | sentence),
                      REML = FALSE)
 
-mod_freq_lo_null = lmer(data = df_wider_freq,
-                     log_odds ~ log_freq_wordform  + word_number + source +
+mod_freq_lo_null = lmer(data = df_wider_freq_og,
+                     log_odds ~ log_freq_wordform  + word_number + source * word_number +
+                       (1 | lemma) + (1 | sentence),
+                     REML = FALSE)
+
+mod_no_freq_int = lmer(data = df_wider_freq_og,
+                     log_odds ~ log_freq_wordform  * word_number + source  +
                        (1 | lemma) + (1 | sentence),
                      REML = FALSE)
 
 summary(mod_freq_lo)
 anova(mod_freq_lo, mod_freq_lo_null)
+anova(mod_freq_lo, mod_no_freq_int)
 
 
 df_wider_freq %>%
